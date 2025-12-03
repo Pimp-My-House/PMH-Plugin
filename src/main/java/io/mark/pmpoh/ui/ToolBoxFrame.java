@@ -42,8 +42,6 @@ public class ToolBoxFrame extends JFrame
     @Getter
     private String carpetSize = "3x3";
     
-
-    
     @Inject
     private ObjectManager objectManager;
     
@@ -185,62 +183,25 @@ public class ToolBoxFrame extends JFrame
         scatterSettingsPanel = createScatterSettingsPanel();
         carpetSettingsPanel = createCarpetSettingsPanel();
         
-        // Configure Single button (default selected)
-        singleButton.setFocusable(false);
-        singleButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        singleButton.setForeground(Color.WHITE);
-        singleButton.addActionListener(e -> {
-            log.debug("Single placement selected");
-            currentPlacementType = "single";
-            // Update button states
-            singleButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-            singleButton.setForeground(Color.WHITE);
-            scatterButton.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            scatterButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-            carpetButton.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            carpetButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-            // Hide settings panels
-            scatterSettingsPanel.setVisible(false);
-            carpetSettingsPanel.setVisible(false);
-        });
+        // Configure buttons with action listeners
+        configurePlacementButton(singleButton, scatterButton, carpetButton, "single", 
+            () -> {
+                scatterSettingsPanel.setVisible(false);
+                carpetSettingsPanel.setVisible(false);
+            });
+        configurePlacementButton(scatterButton, singleButton, carpetButton, "scatter",
+            () -> {
+                scatterSettingsPanel.setVisible(true);
+                carpetSettingsPanel.setVisible(false);
+            });
+        configurePlacementButton(carpetButton, singleButton, scatterButton, "carpet",
+            () -> {
+                carpetSettingsPanel.setVisible(true);
+                scatterSettingsPanel.setVisible(false);
+            });
         
-        // Configure Scatter button
-        scatterButton.setFocusable(false);
-        scatterButton.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        scatterButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-        scatterButton.addActionListener(e -> {
-            log.debug("Scatter placement selected");
-            currentPlacementType = "scatter";
-            // Update button states
-            scatterButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-            scatterButton.setForeground(Color.WHITE);
-            singleButton.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            singleButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-            carpetButton.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            carpetButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-            // Show scatter settings, hide carpet settings
-            scatterSettingsPanel.setVisible(true);
-            carpetSettingsPanel.setVisible(false);
-        });
-        
-        // Configure Carpet button
-        carpetButton.setFocusable(false);
-        carpetButton.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        carpetButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-        carpetButton.addActionListener(e -> {
-            log.debug("Carpet placement selected");
-            currentPlacementType = "carpet";
-            // Update button states
-            carpetButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-            carpetButton.setForeground(Color.WHITE);
-            singleButton.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            singleButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-            scatterButton.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            scatterButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-            // Show carpet settings, hide scatter settings
-            carpetSettingsPanel.setVisible(true);
-            scatterSettingsPanel.setVisible(false);
-        });
+        // Set Single as default selected
+        updateButtonStates(singleButton, scatterButton, carpetButton, singleButton);
         
         buttonsRow.add(singleButton);
         buttonsRow.add(scatterButton);
@@ -392,6 +353,27 @@ public class ToolBoxFrame extends JFrame
         settingsPanel.add(sizePanel);
         
         return settingsPanel;
+    }
+    
+    private void configurePlacementButton(JButton button, JButton other1, JButton other2, String type, Runnable onSelect) {
+        button.setFocusable(false);
+        button.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        button.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        button.addActionListener(e -> {
+            log.debug("{} placement selected", type);
+            currentPlacementType = type;
+            updateButtonStates(button, other1, other2, button);
+            onSelect.run();
+        });
+    }
+    
+    private void updateButtonStates(JButton selected, JButton unselected1, JButton unselected2, JButton defaultButton) {
+        selected.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        selected.setForeground(Color.WHITE);
+        unselected1.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        unselected1.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        unselected2.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        unselected2.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
     }
 
     public void showToolbox()

@@ -93,19 +93,12 @@ public class EditorPanel extends PluginPanel
      */
     public void updateToolboxButtonState() {
         if (toolBoxButton == null || errorPanel == null || objectManager == null) {
-            return; // Not initialized yet
+            return;
         }
         
         // Check if objects are still loading
         if (objectManager.isLoading()) {
-            // Make sure toolbox button is showing (not retry button)
-            if (retryButton != null && retryButton.getParent() != null && retryButton.isVisible()) {
-                JPanel buttonPanel = (JPanel) retryButton.getParent();
-                buttonPanel.remove(retryButton);
-                buttonPanel.add(toolBoxButton, BorderLayout.CENTER);
-                buttonPanel.revalidate();
-                buttonPanel.repaint();
-            }
+            showToolboxButton();
             toolBoxButton.setEnabled(false);
             toolBoxButton.setVisible(true);
             errorPanel.setContent("Loading Objects", "Downloading and parsing objects.json... Please wait.");
@@ -113,32 +106,16 @@ public class EditorPanel extends PluginPanel
             return;
         }
         
-
+        // Check if loading failed
         if (!objectManager.isReady() && objectManager.getLoadingError() != null) {
-            if (retryButton != null && toolBoxButton.getParent() != null) {
-                JPanel buttonPanel = (JPanel) toolBoxButton.getParent();
-                buttonPanel.remove(toolBoxButton);
-                buttonPanel.add(retryButton, BorderLayout.CENTER);
-                retryButton.setVisible(true);
-                retryButton.setEnabled(true);
-                buttonPanel.revalidate();
-                buttonPanel.repaint();
-            }
+            showRetryButton();
             errorPanel.setContent("Failed to Load Objects", "Please try again..");
             toolBoxFrame.setVisible(false);
             return;
         }
         
-        // Objects are ready, check other conditions
-        // Swap back to toolbox button if retry button is showing
-        if (retryButton != null && retryButton.getParent() != null && retryButton.isVisible()) {
-            JPanel buttonPanel = (JPanel) retryButton.getParent();
-            buttonPanel.remove(retryButton);
-            buttonPanel.add(toolBoxButton, BorderLayout.CENTER);
-            toolBoxButton.setVisible(true);
-            buttonPanel.revalidate();
-            buttonPanel.repaint();
-        }
+        // Objects are ready
+        showToolboxButton();
         
         // Debug mode: only check ObjectManager is ready, skip POH/save checks
         if (ALWAYS_ALLOW_FRAME && objectManager.isReady()) {
@@ -148,29 +125,50 @@ public class EditorPanel extends PluginPanel
             return;
         }
         
+        // Normal mode: check login, POH, and save file
         boolean isLoggedIn = client.getGameState() == GameState.LOGGED_IN;
-        boolean inPoh = client.getGameState() == GameState.LOGGED_IN && pimpMyPohPlugin.isInPoh();
-        boolean hasSave = client.getGameState() == GameState.LOGGED_IN && pimpMyPohPlugin.hasSaveFile();
+        boolean inPoh = isLoggedIn && pimpMyPohPlugin.isInPoh();
+        boolean hasSave = isLoggedIn && pimpMyPohPlugin.hasSaveFile();
 
         if (!isLoggedIn) {
-            toolBoxButton.setEnabled(false);
-            errorPanel.setContent("Not Logged In", "You must be logged in to use the toolbox");
-            toolBoxButton.setToolTipText("You must be logged in to use the toolbox");
-            toolBoxFrame.setVisible(false);
+            setButtonState(false, "Not Logged In", "You must be logged in to use the toolbox");
         } else if (!inPoh) {
-            toolBoxButton.setEnabled(false);
-            errorPanel.setContent("Not in POH", "You must be in your POH to use the toolbox");
-            toolBoxButton.setToolTipText("You must be in your POH to use the toolbox");
-            toolBoxFrame.setVisible(false);
+            setButtonState(false, "Not in POH", "You must be in your POH to use the toolbox");
         } else if (!hasSave) {
-            toolBoxButton.setEnabled(false);
-            errorPanel.setContent("No Save File", "Please view your POH first to create a save file");
-            toolBoxButton.setToolTipText("Please view your POH first to create a save file");
-            toolBoxFrame.setVisible(false);
+            setButtonState(false, "No Save File", "Please view your POH first to create a save file");
         } else {
-            toolBoxButton.setEnabled(true);
-            errorPanel.setContent("Toolbox Ready", "Click 'Open Toolbox' to use advanced POH editing tools.");
-            toolBoxButton.setToolTipText("Opens an external interface for advanced POH editing tools");
+            setButtonState(true, "Toolbox Ready", "Click 'Open Toolbox' to use advanced POH editing tools.");
         }
+    }
+    
+    private void showToolboxButton() {
+        if (retryButton != null && retryButton.getParent() != null && retryButton.isVisible()) {
+            swapButton(retryButton, toolBoxButton);
+        }
+    }
+    
+    private void showRetryButton() {
+        if (retryButton != null && toolBoxButton.getParent() != null) {
+            swapButton(toolBoxButton, retryButton);
+            retryButton.setVisible(true);
+            retryButton.setEnabled(true);
+        }
+    }
+    
+    private void swapButton(JButton toRemove, JButton toAdd) {
+        JPanel buttonPanel = (JPanel) toRemove.getParent();
+        if (buttonPanel != null) {
+            buttonPanel.remove(toRemove);
+            buttonPanel.add(toAdd, BorderLayout.CENTER);
+            buttonPanel.revalidate();
+            buttonPanel.repaint();
+        }
+    }
+    
+    private void setButtonState(boolean enabled, String title, String message) {
+        toolBoxButton.setEnabled(enabled);
+        errorPanel.setContent(title, message);
+        toolBoxButton.setToolTipText(message);
+        toolBoxFrame.setVisible(false);
     }
 }

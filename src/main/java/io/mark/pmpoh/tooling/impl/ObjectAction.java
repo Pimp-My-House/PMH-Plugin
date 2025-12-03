@@ -51,10 +51,10 @@ public class ObjectAction implements MouseListener, KeyListener
 
     @Inject
     private ClientThread clientThread;
-    
+
     @Inject
     private PimpMyPohPlugin plugin;
-    
+
     @Inject
     private RoomManagementService roomManagementService;
 
@@ -69,7 +69,7 @@ public class ObjectAction implements MouseListener, KeyListener
     private boolean editMode = false;
     private LocalPoint lastPreviewLocation;
     private int lastPreviewOrientation = -1;
-    
+
     // RuneLiteObject cache with LRU eviction (max 200 entries)
     private static final int MAX_OBJECT_CACHE_SIZE = 200;
     private final Map<String, RuneLiteObject> objectCache = new LinkedHashMap<String, RuneLiteObject>(MAX_OBJECT_CACHE_SIZE, 0.75f, true) {
@@ -98,9 +98,7 @@ public class ObjectAction implements MouseListener, KeyListener
 
 
     @Override
-    public MouseEvent mouseClicked(MouseEvent mouseEvent)
-    {
-        // No special handling; just pass the event through
+    public MouseEvent mouseClicked(MouseEvent mouseEvent) {
         return mouseEvent;
     }
 
@@ -111,7 +109,7 @@ public class ObjectAction implements MouseListener, KeyListener
             Point mousePos = client.getMouseCanvasPosition();
             clickX = mousePos.getX();
             clickY = mousePos.getY();
-            
+
             if (client.getSelectedSceneTile().getLocalLocation() != null && selectedGameval != null) {
                 clientThread.invoke(() -> {
                     spawnObject();
@@ -129,9 +127,7 @@ public class ObjectAction implements MouseListener, KeyListener
     }
 
     @Override
-    public MouseEvent mouseEntered(MouseEvent mouseEvent)
-    {
-        // No special handling; just pass the event through
+    public MouseEvent mouseEntered(MouseEvent mouseEvent) {
         return mouseEvent;
     }
 
@@ -154,7 +150,7 @@ public class ObjectAction implements MouseListener, KeyListener
         updatePreviewIfNeeded();
         return mouseEvent;
     }
-    
+
     private void updatePreviewIfNeeded() {
         if (shouldProcess() && actionType == ActionType.PLACE_OBJECT && editMode && hasSelectedObject()) {
             Tile tile = client.getSelectedSceneTile();
@@ -171,27 +167,27 @@ public class ObjectAction implements MouseListener, KeyListener
     public void spawnObject() {
         Tile tile = client.getSelectedSceneTile();
         if (tile == null) return;
-        
+
         LocalPoint localPoint = tile.getLocalLocation();
         if (localPoint == null) return;
-        
+
         ObjectType objectType = objectManager.getByGameval(selectedGameval);
         if (objectType == null) return;
-        
+
         // Create and register object
         RuneLiteObject runeLiteObject = client.createRuneLiteObject();
         runeLiteObject.setDrawFrontTilesFirst(false);
-        
+
         Model model = objectType.getModel(client);
         if (model != null) {
             runeLiteObject.setModel(model);
         }
-        
+
         runeLiteObject.setOrientation(orientation);
         runeLiteObject.setLocation(localPoint, 0);
         runeLiteObject.setActive(true);
         client.registerRuneLiteObject(runeLiteObject);
-        
+
         // Save object to room
         saveObjectToRoom(localPoint, selectedGameval, orientation);
     }
@@ -236,9 +232,9 @@ public class ObjectAction implements MouseListener, KeyListener
 
         // Save room positions
         roomManagementService.saveRooms();
-        
-        log.info("Saved object {} to room {} at zone ({}, {}), tile ({}, {})", 
-            gameval, room.getRoomName(), zoneX, zoneY, tileX, tileZ);
+
+        log.info("Saved object {} to room {} at zone ({}, {}), tile ({}, {})",
+                gameval, room.getRoomName(), zoneX, zoneY, tileX, tileZ);
     }
 
     /**
@@ -289,24 +285,24 @@ public class ObjectAction implements MouseListener, KeyListener
         previewObject.setOrientation(currentOrientation);
         previewObject.setLocation(localPoint, client.getTopLevelWorldView().getPlane());
         previewObject.setActive(true);
-        
+
         lastPreviewLocation = localPoint;
         lastPreviewOrientation = currentOrientation;
     }
-    
+
     private int calculateOrientation(LocalPoint localPoint) {
         if (!mousePressed) {
             return Rotation.roundRotation(orientation);
         }
-        
+
         Point mousePos = client.getMouseCanvasPosition();
         double dx = mousePos.getX() - clickX;
         double dy = -(mousePos.getY() - clickY);
-        
+
         if (Math.sqrt(dx * dx + dy * dy) < 40) {
             return Rotation.roundRotation(orientation);
         }
-        
+
         return Rotation.getJagexDegrees((int)dx, (int)dy, client.getCameraYaw(), client.getCameraPitch());
     }
 
@@ -326,40 +322,39 @@ public class ObjectAction implements MouseListener, KeyListener
     /**
      * Clear selection and remove preview
      */
-
     public void clearSelection() {
         this.selectedGameval = null;
         editMode = false; // Exit edit mode when selection is cleared
         removePreview();
     }
-    
+
     /**
      * Clear the RuneLiteObject cache
      */
     public void clearObjectCache() {
         objectCache.values().stream()
-            .filter(obj -> obj != null && obj.isActive())
-            .forEach(obj -> client.removeRuneLiteObject(obj));
+                .filter(obj -> obj != null && obj.isActive())
+                .forEach(obj -> client.removeRuneLiteObject(obj));
         objectCache.clear();
     }
 
     @Override
     public void keyTyped(KeyEvent e) {
-
+        // No action needed
     }
 
     @Override
     public void keyPressed(java.awt.event.KeyEvent keyEvent) {
         int keyCode = keyEvent.getKeyCode();
-        
+
         // Toggle edit mode with Control
         if (keyCode == java.awt.event.KeyEvent.VK_CONTROL && hasSelectedObject()) {
             if (!plugin.hasSaveFile()) {
-                clientThread.invoke(() -> 
-                    client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Please view poh viewer before carrying on", null));
+                clientThread.invoke(() ->
+                        client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Please view poh viewer before carrying on", null));
                 return;
             }
-            
+
             editMode = !editMode;
             Tile tile = client.getSelectedSceneTile();
             clientThread.invoke(() -> {
@@ -370,7 +365,7 @@ public class ObjectAction implements MouseListener, KeyListener
                 }
             });
         }
-        
+
         // Rotate with R key
         if (keyCode == java.awt.event.KeyEvent.VK_R && editMode && hasSelectedObject()) {
             orientation = (orientation + 256) % 2048;
@@ -383,6 +378,6 @@ public class ObjectAction implements MouseListener, KeyListener
 
     @Override
     public void keyReleased(KeyEvent e) {
-
+        // No action needed
     }
 }

@@ -597,7 +597,7 @@ public class ObjectsListPanel extends JPanel {
         scrollPane.getVerticalScrollBar().setValue(0); // Scroll to top
     }
     
-    private File getRecentObjectsFile() {
+    private File getSaveFile(String filename) {
         String userHome = System.getProperty("user.home");
         Path saveDir = Paths.get(userHome, ".runelite", SAVE_DIR);
         
@@ -607,11 +607,11 @@ public class ObjectsListPanel extends JPanel {
             log.warn("Failed to create save directory", e);
         }
         
-        return saveDir.resolve(RECENT_OBJECTS_FILE).toFile();
+        return saveDir.resolve(filename).toFile();
     }
     
     private void loadRecentObjects() {
-        File recentFile = getRecentObjectsFile();
+        File recentFile = getSaveFile(RECENT_OBJECTS_FILE);
         
         if (!recentFile.exists()) {
             log.debug("No recent objects file found");
@@ -637,33 +637,11 @@ public class ObjectsListPanel extends JPanel {
     }
     
     private void saveRecentObjects() {
-        File recentFile = getRecentObjectsFile();
-        
-        try (FileWriter writer = new FileWriter(recentFile)) {
-            // Convert LinkedHashSet to List to preserve order
-            List<String> recentList = new ArrayList<>(recentObjects);
-            gson.toJson(recentList, writer);
-            log.debug("Saved {} recent objects to disk", recentObjects.size());
-        } catch (IOException e) {
-            log.warn("Failed to save recent objects to disk", e);
-        }
-    }
-    
-    private File getFavoritesFile() {
-        String userHome = System.getProperty("user.home");
-        Path saveDir = Paths.get(userHome, ".runelite", SAVE_DIR);
-        
-        try {
-            Files.createDirectories(saveDir);
-        } catch (IOException e) {
-            log.warn("Failed to create save directory", e);
-        }
-        
-        return saveDir.resolve(FAVORITES_OBJECTS_FILE).toFile();
+        saveToFile(RECENT_OBJECTS_FILE, new ArrayList<>(recentObjects), "recent objects");
     }
     
     private void loadFavorites() {
-        File favoritesFile = getFavoritesFile();
+        File favoritesFile = getSaveFile(FAVORITES_OBJECTS_FILE);
         
         if (!favoritesFile.exists()) {
             log.debug("No favorites file found");
@@ -685,15 +663,17 @@ public class ObjectsListPanel extends JPanel {
     }
     
     private void saveFavorites() {
-        File favoritesFile = getFavoritesFile();
+        saveToFile(FAVORITES_OBJECTS_FILE, new ArrayList<>(favoriteObjects), "favorite objects");
+    }
+    
+    private void saveToFile(String filename, List<String> data, String description) {
+        File file = getSaveFile(filename);
         
-        try (FileWriter writer = new FileWriter(favoritesFile)) {
-            // Convert LinkedHashSet to List to preserve order
-            List<String> favoritesList = new ArrayList<>(favoriteObjects);
-            gson.toJson(favoritesList, writer);
-            log.debug("Saved {} favorite objects to disk", favoriteObjects.size());
+        try (FileWriter writer = new FileWriter(file)) {
+            gson.toJson(data, writer);
+            log.debug("Saved {} {} to disk", data.size(), description);
         } catch (IOException e) {
-            log.warn("Failed to save favorites to disk", e);
+            log.warn("Failed to save {} to disk", description, e);
         }
     }
 }
