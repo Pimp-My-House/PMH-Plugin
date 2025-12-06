@@ -521,31 +521,45 @@ public class ObjectsListPanel extends JPanel {
                     gameval,
                     objectType != null ? objectType.getId() : 0,
                     g -> {
-                        // onSelect handler - deselect previous and select this one
-                        if (selectedSlot != null)
-                        {
-                            selectedSlot.setSelected(false);
-                        }
+                        // onSelect handler - toggle selection
                         ObjectListSlot clickedSlot = slotsByGameval.get(g);
                         if (clickedSlot != null)
                         {
-                            selectedSlot = clickedSlot;
-                            clickedSlot.setSelected(true);
-                            // Update ObjectAction with selected gameval
-                            plugin.getObjectAction().setSelectedGameval(g);
-                            
-                            // Add to recent objects (maintains order, removes duplicates)
-                            recentObjects.remove(g); // Remove if already exists
-                            recentObjects.add(g); // Add to end (most recent)
-                            
-                            // Limit to MAX_RECENT_OBJECTS, remove oldest if needed
-                            while (recentObjects.size() > MAX_RECENT_OBJECTS) {
-                                String oldest = recentObjects.iterator().next();
-                                recentObjects.remove(oldest);
+                            // If clicking the already selected slot, deselect it
+                            if (selectedSlot == clickedSlot && clickedSlot.isSelected())
+                            {
+                                clickedSlot.setSelected(false);
+                                selectedSlot = null;
+                                // Clear selection in ObjectAction (but don't exit edit mode)
+                                plugin.getObjectAction().setSelectedGameval(null);
+                                // Remove preview but keep edit mode active
+                                plugin.getObjectAction().removePreview();
                             }
-                            
-                            // Save to disk
-                            saveRecentObjects();
+                            else
+                            {
+                                // Deselect previous and select this one
+                                if (selectedSlot != null)
+                                {
+                                    selectedSlot.setSelected(false);
+                                }
+                                selectedSlot = clickedSlot;
+                                clickedSlot.setSelected(true);
+                                // Update ObjectAction with selected gameval
+                                plugin.getObjectAction().setSelectedGameval(g);
+                                
+                                // Add to recent objects (maintains order, removes duplicates)
+                                recentObjects.remove(g); // Remove if already exists
+                                recentObjects.add(g); // Add to end (most recent)
+                                
+                                // Limit to MAX_RECENT_OBJECTS, remove oldest if needed
+                                while (recentObjects.size() > MAX_RECENT_OBJECTS) {
+                                    String oldest = recentObjects.iterator().next();
+                                    recentObjects.remove(oldest);
+                                }
+                                
+                                // Save to disk
+                                saveRecentObjects();
+                            }
                         }
                     },
                     g -> {

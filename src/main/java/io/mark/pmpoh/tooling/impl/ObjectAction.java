@@ -329,7 +329,7 @@ public class ObjectAction implements MouseListener, KeyListener
     /**
      * Remove the preview object
      */
-    private void removePreview() {
+    public void removePreview() {
         if (previewObject != null) {
             previewObject.setActive(false);
             client.removeRuneLiteObject(previewObject);
