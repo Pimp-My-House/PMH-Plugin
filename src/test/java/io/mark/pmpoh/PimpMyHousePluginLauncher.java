@@ -13,6 +13,8 @@ public class PimpMyHousePluginLauncher
 {
 	public static void main(String[] args) throws Exception
 	{
+		// Enable dev mode when running from launcher
+		System.setProperty("pimpmyhouse.dev.mode", "true");
 		useLatestPluginHub();
 		ExternalPluginManager.loadBuiltin(PimpMyPohPlugin.class);
 		RuneLite.main(args);

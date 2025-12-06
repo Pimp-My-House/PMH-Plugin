@@ -1,5 +1,6 @@
 package io.mark.pmpoh.tooling.impl;
 
+import io.mark.pmpoh.PimpMyPohConfig;
 import io.mark.pmpoh.PimpMyPohPlugin;
 import io.mark.pmpoh.objects.ObjectManager;
 import io.mark.pmpoh.objects.ObjectType;
@@ -22,6 +23,7 @@ import net.runelite.api.RuneLiteObject;
 import net.runelite.api.Tile;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.Keybind;
 import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.MouseListener;
 
@@ -56,7 +58,13 @@ public class ObjectAction implements MouseListener, KeyListener
     private PimpMyPohPlugin plugin;
 
     @Inject
+    private PimpMyPohConfig config;
+
+    @Inject
     private RoomManagementService roomManagementService;
+
+    @Inject
+    private net.runelite.client.plugins.PluginManager pluginManager;
 
     private ActionType actionType = ActionType.PLACE_OBJECT;
     private BrushType brushType = BrushType.SINGLE;
@@ -66,9 +74,12 @@ public class ObjectAction implements MouseListener, KeyListener
     private boolean mousePressed = false;
     private int clickX;
     private int clickY;
+    @Getter
     private boolean editMode = false;
     private LocalPoint lastPreviewLocation;
     private int lastPreviewOrientation = -1;
+    private int previousOrbState = -1;
+    private int previousOrbSpeed = -1;
 
     // RuneLiteObject cache with LRU eviction (max 200 entries)
     private static final int MAX_OBJECT_CACHE_SIZE = 200;
@@ -199,6 +210,8 @@ public class ObjectAction implements MouseListener, KeyListener
         // Convert local point to zone and tile coordinates (uses cached bounds)
         int[] zoneTile = ZoneTileUtil.localPointToZoneTile(localPoint);
         if (zoneTile == null || zoneTile.length < 3) {
+            log.warn("Failed to convert local point to zone/tile coordinates. LocalPoint: ({}, {})", 
+                    localPoint.getX(), localPoint.getY());
             return;
         }
 
@@ -213,7 +226,8 @@ public class ObjectAction implements MouseListener, KeyListener
         // Find the room at this zone location
         RoomPosition room = roomManagementService.getRoomAt(zoneX, zoneY);
         if (room == null) {
-            log.warn("No room found at zone ({}, {})", zoneX, zoneY);
+            log.error("No room found at zone ({}, {}). Cannot save object. Available rooms: {}", 
+                    zoneX, zoneY, roomManagementService.getRoomsByIndex().size());
             return;
         }
 
@@ -230,11 +244,17 @@ public class ObjectAction implements MouseListener, KeyListener
         }
         room.getObjects().add(objectSpawn);
 
-        // Save room positions
-        roomManagementService.saveRooms();
+        log.debug("Added object {} to room {} at zone ({}, {}), tile ({}, {}). Total objects in room: {}", 
+                gameval, room.getRoomName(), zoneX, zoneY, tileX, tileZ, room.getObjects().size());
 
-        log.info("Saved object {} to room {} at zone ({}, {}), tile ({}, {})",
-                gameval, room.getRoomName(), zoneX, zoneY, tileX, tileZ);
+        // Save room positions immediately
+        try {
+            roomManagementService.saveRooms();
+            log.info("Successfully saved object {} to room {} at zone ({}, {}), tile ({}, {})",
+                    gameval, room.getRoomName(), zoneX, zoneY, tileX, tileZ);
+        } catch (Exception e) {
+            log.error("Failed to save rooms after placing object {}", gameval, e);
+        }
     }
 
     /**
@@ -324,7 +344,18 @@ public class ObjectAction implements MouseListener, KeyListener
      */
     public void clearSelection() {
         this.selectedGameval = null;
-        editMode = false; // Exit edit mode when selection is cleared
+        if (editMode) {
+            editMode = false; // Exit edit mode when selection is cleared
+            // Restore previous orb state and speed
+            clientThread.invoke(() -> {
+                if (previousOrbState != -1) {
+                    client.setOculusOrbState(previousOrbState);
+                }
+                if (previousOrbSpeed != -1) {
+                    client.setOculusOrbNormalSpeed(previousOrbSpeed);
+                }
+            });
+        }
         removePreview();
     }
 
@@ -345,10 +376,8 @@ public class ObjectAction implements MouseListener, KeyListener
 
     @Override
     public void keyPressed(java.awt.event.KeyEvent keyEvent) {
-        int keyCode = keyEvent.getKeyCode();
-
-        // Toggle edit mode with Control
-        if (keyCode == java.awt.event.KeyEvent.VK_CONTROL && hasSelectedObject()) {
+        // Toggle edit mode with configured keybind
+        if (config.editModeKeybind().matches(keyEvent)) {
             if (!plugin.hasSaveFile()) {
                 clientThread.invoke(() ->
                         client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Please view poh viewer before carrying on", null));
@@ -359,15 +388,22 @@ public class ObjectAction implements MouseListener, KeyListener
             Tile tile = client.getSelectedSceneTile();
             clientThread.invoke(() -> {
                 if (editMode) {
-                    updatePreviewObject(tile);
+                    client.setOculusOrbState(1);
+                    client.setOculusOrbNormalSpeed(36);
+                    
+                    if (hasSelectedObject()) {
+                        updatePreviewObject(tile);
+                    }
                 } else {
+                    client.setOculusOrbState(0);
+                    client.setOculusOrbNormalSpeed(12);
                     removePreview();
                 }
             });
         }
 
-        // Rotate with R key
-        if (keyCode == java.awt.event.KeyEvent.VK_R && editMode && hasSelectedObject()) {
+        // Rotate with configured keybind
+        if (config.rotateKeybind().matches(keyEvent) && editMode && hasSelectedObject()) {
             orientation = (orientation + 256) % 2048;
             Tile tile = client.getSelectedSceneTile();
             if (tile != null) {

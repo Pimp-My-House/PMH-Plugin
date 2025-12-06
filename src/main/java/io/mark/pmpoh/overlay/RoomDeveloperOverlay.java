@@ -45,8 +45,11 @@ public class RoomDeveloperOverlay extends Overlay {
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        if (!pimpMyPohPlugin.isInPoh()) return null;
+
+        if (!pimpMyPohPlugin.isDevMode()) return null;
         
+        if (!pimpMyPohPlugin.isInPoh()) return null;
+
         renderZoneBorders(graphics);
 
         return null;

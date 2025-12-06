@@ -27,6 +27,7 @@ package io.mark.pmpoh;
 
 import com.google.inject.Provides;
 import io.mark.pmpoh.objects.ObjectManager;
+import io.mark.pmpoh.overlay.EditModeOverlay;
 import io.mark.pmpoh.overlay.RoomDeveloperOverlay;
 import io.mark.pmpoh.service.ObjectSpawnService;
 import io.mark.pmpoh.service.RoomManagementService;
@@ -105,6 +106,9 @@ public class PimpMyPohPlugin extends Plugin {
     private RoomDeveloperOverlay roomDeveloperOverlay;
     
     @Inject
+    private EditModeOverlay editModeOverlay;
+    
+    @Inject
     private RoomManagementService roomManagementService;
     
     @Inject
@@ -120,6 +124,13 @@ public class PimpMyPohPlugin extends Plugin {
 
     private static final List<Integer> POH_REGIONS = List.of(7257, 7513, 7514, 7769, 7770, 8025, 8026);
 
+    /**
+     * Check if dev mode is enabled (only when running from PimpMyHousePluginLauncher)
+     * @return true if dev mode is enabled, false otherwise
+     */
+    public boolean isDevMode() {
+        return "true".equals(System.getProperty("pimpmyhouse.dev.mode"));
+    }
 
     @Override
     protected void startUp() {
@@ -143,6 +154,7 @@ public class PimpMyPohPlugin extends Plugin {
         mouseManager.registerMouseListener(objectAction);
         keyManager.registerKeyListener(objectAction);
         overlayManager.add(roomDeveloperOverlay);
+        overlayManager.add(editModeOverlay);
         final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "icon.png");
         button = NavigationButton.builder()
                 .tooltip("Pimp My Poh")
@@ -158,6 +170,7 @@ public class PimpMyPohPlugin extends Plugin {
         clientToolbar.removeNavigation(button);
         objectManager.clean();
         overlayManager.remove(roomDeveloperOverlay);
+        overlayManager.remove(editModeOverlay);
         mouseManager.unregisterMouseListener(objectAction);
         keyManager.unregisterKeyListener(objectAction);
     }
@@ -177,6 +190,7 @@ public class PimpMyPohPlugin extends Plugin {
         boolean isInPoh = isInPoh();
 
         if (isInPoh) {
+            System.out.println("IN POH");
             UsableChunkCache.getInstance().calculate(client);
             
             // Ensure cache is valid before loading
@@ -238,11 +252,8 @@ public class PimpMyPohPlugin extends Plugin {
      * @return true if in POH, false otherwise
      */
     public boolean isInPoh() {
-        if (client.getGameState() != GameState.LOGGED_IN) return false;
         WorldView worldView = client.getTopLevelWorldView();
-        if (worldView == null) {
-            return false;
-        }
+        if (worldView.getMapRegions() == null) return false;
 
         int[] regions = worldView.getMapRegions();
         for (int region : regions) {

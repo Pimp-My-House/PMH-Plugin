@@ -14,8 +14,6 @@ import java.awt.*;
 
 public class EditorPanel extends PluginPanel
 {
-    private static final boolean ALWAYS_ALLOW_FRAME = true; // Debug flag: allows opening toolbox without POH/save requirements
-    
     private PimpMyPohPlugin pimpMyPohPlugin;
     
     @Inject
@@ -117,10 +115,10 @@ public class EditorPanel extends PluginPanel
         // Objects are ready
         showToolboxButton();
         
-        // Debug mode: only check ObjectManager is ready, skip POH/save checks
-        if (ALWAYS_ALLOW_FRAME && objectManager.isReady()) {
+        // Dev mode: only check ObjectManager is ready, skip POH/save checks
+        if (pimpMyPohPlugin != null && pimpMyPohPlugin.isDevMode() && objectManager.isReady()) {
             toolBoxButton.setEnabled(true);
-            errorPanel.setContent("Toolbox Ready (Debug Mode)", "Click 'Open Toolbox' to use advanced POH editing tools.");
+            errorPanel.setContent("Toolbox Ready (Dev Mode)", "Click 'Open Toolbox' to use advanced POH editing tools.");
             toolBoxButton.setToolTipText("Opens an external interface for advanced POH editing tools");
             return;
         }

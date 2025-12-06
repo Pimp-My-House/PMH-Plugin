@@ -23,8 +23,6 @@ import java.awt.*;
 @Singleton
 public class ToolBoxFrame extends JFrame
 {
-    private static final boolean ALWAYS_ALLOW_FRAME = true; // Debug flag: allows opening toolbox without POH/save requirements
-    
     private JTabbedPane tabbedPane;
     private JPanel scatterSettingsPanel;
     private JPanel carpetSettingsPanel;
@@ -387,8 +385,8 @@ public class ToolBoxFrame extends JFrame
         // Ensure objects tab is properly initialized (in case injection happened after construction)
         refreshObjectsTab();
         
-        // Debug mode: only check ObjectManager is ready, skip POH/save checks
-        if (ALWAYS_ALLOW_FRAME && objectManager != null && objectManager.isReady()) {
+        // Dev mode: only check ObjectManager is ready, skip POH/save checks
+        if (plugin != null && plugin.isDevMode() && objectManager != null && objectManager.isReady()) {
             setVisible(true);
             toFront();
             repaint();
